@@ -1,5 +1,5 @@
 # PReMM: LLM-Based Program Repair for Multi-Method Bugs via Divide and Conquer
-[TOC]
+
 ## 1. Introduction
 PReMM, an LLM-based program repair framework for Multi-Method Bugs.  PReMM builds on three core components:
 the faulty method clustering component to partition the faulty methods into clusters based on the dependence relationship among them, 
