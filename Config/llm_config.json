@@ -1,0 +1,7 @@
+{
+    "DeepSeek-V3": "<Your own key>",
+    "Qwen2.5-32B":"<Your own key>",
+    "Qwen2.5-72B":"<Your own key>",
+    "CurrentLLM": "Qwen2.5-72B"
+
+}

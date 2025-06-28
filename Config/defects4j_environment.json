@@ -1,0 +1,7 @@
+{
+  "JAVA_7_HOME": "<Your own path>",
+  "JAVA_8_HOME": "<Your own path>",
+  "Defects4J_DIR": "<Your own path>",
+  "Defects4J_V2_DIR": "<Your own path>",
+  "TEMP_DIR": "/tmp"
+}
