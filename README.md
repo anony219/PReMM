@@ -222,7 +222,8 @@ Modify the `Config/defects4j_enviroment.json`
 #### LLM Configuration
 
 Since PReMM is an LLM-based tool, you can choose the following LLMs and enter your own api key. 
-You can also choose other LLMs by modifying the `Config/llm_config.json`
+You can also choose other LLMs by modifying the `Config/llm_config.json`, adding a new LLM to the `Config/llm_config.json` file.
+
 In our work, we use Qwen2.5-72B as our LLM.
 
 ```python
@@ -242,8 +243,12 @@ In our work, we use Qwen2.5-72B as our LLM.
         "model_name": "qwen2.5-72b-instruct",
         "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1"
     },
+    "Your LLM":{
+      "api_key": "<Your own api key>",
+        "model_name": "<Your model name>",
+          "base_url": "<Your model base url>"
+    },
     "CurrentLLM": "Qwen2.5-72B"
-
 }
 ```
 
