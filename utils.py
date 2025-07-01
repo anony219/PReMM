@@ -20,21 +20,23 @@ def get_custom_llm():
     filepath = "Config/llm_config.json"
     config = read_json(filepath)
     model_name = config["CurrentLLM"]
-    if model_name == "Deepseek-V3":
-        return ChatOpenAI(openai_api_key=config["Deepseek-V3"],
-                          openai_api_base="https://api.deepseek.com/v1",
-                          model_name="deepseek-chat", temperature=1), model_name
-    if model_name == "Qwen2.5-32B":
-        return ChatOpenAI(openai_api_key=config["Qwen2.5-32B"],
-                          openai_api_base="https://idealab.alibaba-inc.com/api/openai/v1",
-                          model_name="qwen2.5-32b-instruct", temperature=1), model_name
-    if model_name == "Qwen2.5-72B":
-        return ChatOpenAI(openai_api_key=config["Qwen2.5-32B"],
-                          openai_api_base="https://idealab.alibaba-inc.com/api/openai/v1",
-                          model_name="qwen2.5-32b-instruct", temperature=1), model_name
-    if model_name == "Qwen2.5-72B-Local":
-        return ChatOpenAI(openai_api_key="EMPTY", openai_api_base="http://114.212.170.115:11288/v1",
-                   model_name="Qwen2.5-72B", temperature=1), model_name
+    # if model_name == "Deepseek-V3":
+    #     return ChatOpenAI(openai_api_key=config["Deepseek-V3"],
+    #                       openai_api_base="https://api.deepseek.com/v1",
+    #                       model_name="deepseek-chat", temperature=1), model_name
+    # if model_name == "Qwen2.5-32B":
+    #     return ChatOpenAI(openai_api_key=config["Qwen2.5-32B"],
+    #                       openai_api_base="https://dashscope.aliyuncs.com/compatible-mode/v1",
+    #                       model_name="qwen2.5-32b-instruct", temperature=1), model_name
+    # if model_name == "Qwen2.5-72B":
+    #     return ChatOpenAI(openai_api_key=config["Qwen2.5-72B"],
+    #                       openai_api_base="https://dashscope.aliyuncs.com/compatible-mode/v1",
+    #                       model_name="qwen2.5-72b-instruct", temperature=1), model_name
+    # if model_name == "Qwen2.5-72B-Local":
+    #     return ChatOpenAI(openai_api_key="EMPTY", openai_api_base="http://114.212.170.115:11288/v1",
+    #                model_name="Qwen2.5-72B", temperature=1), model_name
+    return ChatOpenAI(openai_api_key=config[model_name].get("api_key"), openai_api_base=config[model_name].get("base_url"),
+                   model_name=config[model_name].get("model_name"), temperature=1), model_name
 
 
 environment_config = read_json("Config/defects4j_environment.json")
