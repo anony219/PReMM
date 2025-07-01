@@ -4,7 +4,7 @@ import os
 import utils
 from basic_framework.main_graph import main_agent
 from defects4j_tools.defects4j import prepare_project, get_necessary_path, test_project
-from defects4j_tools.fault_localization import fault_locate
+from basic_framework.fault_localization import fault_locate
 from logger import Logger
 
 d4j_bus = ['Lang-3', 'Math-37', 'Math-30', 'Lang-4', 'Math-39', 'Math-55', 'Math-52', 'Time-7', 'Math-99', 'Math-64',

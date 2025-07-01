@@ -413,7 +413,7 @@ The Java analysis module is invoked by Python through two interfaces in `basic_f
      - `root_dir`: Repository root (e.g., `/tmp/Chart-1`)
      - `source_dir`: Source code directory (e.g., `source`)
      - `class_dir`: Compiled classes path (e.g., `build/classes`)
-     - `fault_loc_file`: File containing fault locations (e.g., `defects4j_tools/fault_location/defects4j/groundtruth/chart/1`)
+     - `fault_loc_file`: File containing fault locations (e.g., `datasets/defects4j/fault_location/groundtruth/chart/1`)
        - If you want to successfully reuse this artifact to new datasets, the fault location file should be in the same format as the one provided in the `defects4j_tools/fault_location/defects4j` directory.
        - ```shell
          org.jfree.chart.renderer.category.AbstractCategoryItemRenderer.getLegendItems:1797
