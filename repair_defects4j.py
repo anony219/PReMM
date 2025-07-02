@@ -1,4 +1,5 @@
 import csv
+import json
 import os
 
 import utils
@@ -139,6 +140,16 @@ def run_repair_defects4j(tries, version_name, dataset, bug_id):
                         if find:
                             continue
                 run_repair_project(tries, dataset, bug)
+        elif dataset == "defects4j-trans":
+            json_file = f"datasets/defects4j-trans/fault_location/single_function_repair_trans_final_fl.json"
+            with open(json_file, 'r', encoding='utf-8') as file:
+                single_function_bugs = json.load(file)
+            exclusive_list = ["Closure-119", "Closure-78", "Closure-86", "Closure-97", "JacksonDatabind-54", "Lang-18",
+                              "Lang-58"]
+            for key in single_function_bugs:
+                if key in exclusive_list:
+                    continue
+                run_repair_project(tries, dataset, key)
 
 
 def run_repair_project(tries, dataset, bug_id):
@@ -177,3 +188,9 @@ def run_repair_project(tries, dataset, bug_id):
         writer.writerow(row)
     utils.remove_temp_dir(os.path.join(utils.TEMP_DIR, f"{bug_id}"))
     utils.output_test_cases_codes_map(dataset, bug_id)
+    utils.Repair_Result = False
+    utils.Repair_Iterative_Count = 0
+    utils.Prompt_Tokens = 0
+    utils.Completion_Tokens = 0
+    utils.Total_Prompt_Token = 0
+    utils.Total_Completion_Token = 0

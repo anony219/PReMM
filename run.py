@@ -7,7 +7,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--folder", type=str, default="output")
     parser.add_argument("--lang", type=str, default="java")
-    parser.add_argument("--dataset", type=str, default="defects4j", help="Dataset to use, current support: defects4j, defects4jv2")
+    parser.add_argument("--dataset", type=str, default="defects4j", help="Dataset to use, current support: defects4j, defects4jv2, defects4j-trans")
     parser.add_argument("--model", type=str, default="Tongyi")
     parser.add_argument("--bug_id", type=str, default="Chart-1")
     parser.add_argument("--few_shot", type=int, default=0)

@@ -6,6 +6,10 @@ import pickle
 from langchain_openai import ChatOpenAI
 import tiktoken
 
+import basic_framework.fault_localization
+import defects4j_tools.defects4j
+
+
 def read_json(filepath):
     if os.path.exists(filepath):
         assert filepath.endswith('.json')
@@ -389,3 +393,11 @@ def cal_token(*args):
         elif isinstance(v, list) and isinstance(v[0], dict):
             lenth += sum([cal_token(vd) for vd in v])
     return lenth // 2
+
+
+def init_defects4j_trans_env(database_name, bug_id, working_dir):
+    json_file = f"datasets/{database_name}/fault_location/single_function_repair_trans_final_fl.json"
+    with open(json_file, 'r', encoding='utf-8') as file:
+        single_function_bugs = json.load(file)
+    code_info = single_function_bugs.get(bug_id)
+    modify_file_pre(working_dir, code_info)

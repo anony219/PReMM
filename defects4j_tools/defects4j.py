@@ -25,7 +25,7 @@ def prepare_project(database_name, bug_id, working_dir):
     prepare_dataset_env_cmd = ""
     if database_name == "defects4j" or database_name == "Defects4j":
         prepare_dataset_env_cmd = utils.Defects4J_CMD
-    elif database_name == "defects4jv2":
+    elif database_name == "defects4jv2" or database_name == "defects4j-trans":
         prepare_dataset_env_cmd = utils.Defects4J_V2_CMD
     project_name = bug_id.split("-")[0]
     id = int(bug_id.split("-")[1])
@@ -39,7 +39,11 @@ def prepare_project(database_name, bug_id, working_dir):
     if not os.path.exists("output"):
         os.makedirs("output")
     logger = Logger(os.path.join("output", bug_id + "_result.txt"))
+
     run_command(execute_cmd, logger)
+    if database_name == "defects4j-trans":
+        utils.init_defects4j_trans_env(database_name, bug_id, working_dir)
+        compile_project(database_name, bug_id, working_dir)
 
 
 def get_test_code(working_dir, test_source_dir, test_name):
@@ -91,7 +95,7 @@ def run_single_test(database_name, working_dir, test_source_dir, test_case):
     prepare_dataset_env_cmd = ""
     if database_name == "defects4j" or database_name == "Defects4j":
         prepare_dataset_env_cmd = utils.Defects4J_CMD
-    elif database_name == "defects4jv2":
+    elif database_name == "defects4jv2" or database_name == "defects4j-trans":
         prepare_dataset_env_cmd = utils.Defects4J_V2_CMD
     test_cmd = f"defects4j test -w {working_dir} -t {test_case}"
     execute_cmd = " && ".join([prepare_dataset_env_cmd, test_cmd])
@@ -164,7 +168,7 @@ def test_project(database_name, bug_id, working_dir, test_source_dir):
     prepare_dataset_env_cmd = ""
     if database_name == "defects4j" or database_name == "Defects4j":
         prepare_dataset_env_cmd = utils.Defects4J_CMD
-    elif database_name == "defects4jv2":
+    elif database_name == "defects4jv2" or database_name == "defects4j-trans":
         prepare_dataset_env_cmd = utils.Defects4J_V2_CMD
     cd_working_dir_cmd = f"cd {working_dir}"
     test_cmd = f"defects4j test"
@@ -190,7 +194,7 @@ def compile_project(database_name, bug_id, working_dir):
     prepare_dataset_env_cmd = ""
     if database_name == "defects4j" or database_name == "Defects4j":
         prepare_dataset_env_cmd = utils.Defects4J_CMD
-    elif database_name == "defects4jv2":
+    elif database_name == "defects4jv2" or database_name == "defects4j-trans":
         prepare_dataset_env_cmd = utils.Defects4J_V2_CMD
     cd_working_dir_cmd = f"cd {working_dir}"
     test_cmd = f"defects4j compile"
@@ -205,7 +209,7 @@ def get_test_info(database_name, working_dir, test_source_dir, num_tests=1):
     prepare_dataset_env_cmd = ""
     if database_name == "defects4j" or database_name == "Defects4j":
         prepare_dataset_env_cmd = utils.Defects4J_CMD
-    elif database_name == "defects4jv2":
+    elif database_name == "defects4jv2" or database_name == "defects4j-trans":
         prepare_dataset_env_cmd = utils.Defects4J_V2_CMD
     cd_working_dir_cmd = f"cd {working_dir}"
     cat_test_info = "cat failing_tests"
@@ -237,7 +241,7 @@ def get_necessary_path(database_name, working_dir):
     prepare_dataset_env_cmd = ""
     if database_name == "defects4j" or database_name == "Defects4j":
         prepare_dataset_env_cmd = utils.Defects4J_CMD
-    elif database_name == "defects4jv2":
+    elif database_name == "defects4jv2" or database_name == "defects4j-trans":
         prepare_dataset_env_cmd = utils.Defects4J_V2_CMD
     source_dir = os.popen(
         " && ".join([prepare_dataset_env_cmd, "defects4j export -p dir.src.classes -w " + working_dir])).readlines()[
@@ -268,7 +272,7 @@ def javac_compile(database_name, working_dir, classes_path, target_file_path):
     prepare_dataset_env_cmd = ""
     if database_name == "defects4j" or database_name == "Defects4j":
         prepare_dataset_env_cmd = utils.Defects4J_CMD
-    elif database_name == "defects4jv2":
+    elif database_name == "defects4jv2" or database_name == "defects4j-trans":
         prepare_dataset_env_cmd = utils.Defects4J_V2_CMD
     cd_working_dir_cmd = f"cd {working_dir}"
     javac_compile_cmd = f"javac -cp {classes_path} {os.path.join(working_dir, target_file_path)}"

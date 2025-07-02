@@ -82,7 +82,7 @@ def get_role_prompt(role, a_state: AgentState):
                 for repair in a_state.get('repair_state').get('repair_history'):
                     error_prompt += (f"For fault method {repair.get('fault_method_signature')},\n" + str(repair.get(
                         'repair_code')) + "\n")
-                error_prompt += f"However, the fixed version is still not correct, {error_prompt}.\n"
+                error_prompt += f"However, the fixed version is still not correct, it encounters the following errors:\n"
                 if a_state.get('repair_state').get('repair_result') == RepairStateEnum.COMPILE_ERROR:
                     error_prompt += f"Codes have the following compilation error: {a_state.get('compile_error_info')[:min(len(a_state.get('compile_error_info')), 300)]}.\n"
                 elif a_state.get('repair_state').get('repair_result') == RepairStateEnum.REPAIR_EXCEPTION:
