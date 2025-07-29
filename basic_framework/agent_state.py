@@ -1,6 +1,8 @@
 from typing import TypedDict
 from enum import Enum
 
+from benchmark.benchmark import Benchmark
+
 
 class FaultCode(TypedDict):
     fault_method: str
@@ -93,11 +95,6 @@ class AgentState(TypedDict):
     fault_files: list[str]
     failed_test_cases: list[TestCase]
     related_tests: set
-    working_dir: str
-    compile_jar_path: str
-    source_dir_path: str
-    class_dir_path: str
-    test_build_path: str
     compile_error_info: str
     relative_suspicious_paths: list
     key_tokens: dict
@@ -108,23 +105,17 @@ class AgentState(TypedDict):
     dependency_analysis_prompt: bool
     similar_codes_prompt: bool
     key_token_mining_prompt: bool
-    fault_analysis_success:bool
+    fault_analysis_success: bool
+    bug_benchmark: Benchmark
 
 
 class MAgentState(TypedDict):
     bug_id: str
     database_name: str
-    working_dir: str
-    compile_jar_path: str
-    class_dir_path: str
-    test_build_path: str
-    source_dir_path: str
-    test_source_dir_path: str
     agent_states: list[AgentState]
     failed_test_cases: dict
     fault_codes_list: list[dict]
     fault_files: list[str]
     repair_result: RepairStateEnum
     merged_agents: dict
-    fault_location_file: str
-
+    bug_benchmark: Benchmark

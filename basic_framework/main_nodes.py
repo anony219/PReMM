@@ -1,59 +1,36 @@
 import os.path
 from basic_framework.agent_state import MAgentState, RepairStateEnum, AgentState, RepairState
-from defects4j_tools.defects4j import *
-from basic_framework.program_analysis import program_analysis, key_token_mining, related_analysis
-from utils import get_codes_from_file, modify_files, recover_files, generate_patch_diff, generate_patch_file
+from basic_framework.program_analysis import program_analysis_repository, key_token_mining
+import utils
 
 
 def preprocessor(m_state: MAgentState):
-    if m_state.get('database_name').startswith("defects4j"):
-        if not os.path.exists(os.path.join(utils.ANALYSIS_DIR, m_state.get('database_name'), m_state.get('bug_id'))):
-            signature_method_map, methods_tests_map, method_test_path_map = program_analysis_repository(
-                m_state.get('working_dir'),
-                m_state.get('source_dir_path'),
-                m_state.get('class_dir_path'),
-                m_state.get('test_build_path'),
-                list(m_state.get('failed_test_cases').keys()),
-                m_state.get('fault_location_file'))
-            utils.output_prepare_info(m_state.get('database_name'), m_state.get('bug_id'),
-                                      signature_method_map, methods_tests_map, method_test_path_map)
-        else:
-            repository_info = {}
-            repository_info['compile_jar_path'], repository_info['source_dir_path'], repository_info['class_dir_path'], \
-                repository_info['test_build_path'], repository_info['test_source_dir_path'] = (
-                get_necessary_path(m_state.get('database_name'), m_state.get('working_dir')))
-            signature_method_map, methods_tests_map, method_test_path_map = utils.load_prepare_info(
-                m_state.get('database_name'), m_state.get('bug_id'))
-        m_state['fault_codes_list'], m_state['fault_files'] = utils.codes_format_transform(
-            list(signature_method_map.values()))
-        if utils.Enable_FMC:
-            faulty_methods_clustering(m_state, signature_method_map, methods_tests_map, method_test_path_map)
-        else:
-            init_repair_agent(m_state, signature_method_map, method_test_path_map)
+    m_state['failed_test_cases'] = m_state.get('bug_benchmark').get_init_failing_tests()
+    if not os.path.exists(os.path.join(utils.ANALYSIS_DIR, m_state.get('database_name'), m_state.get('bug_id'))):
+        utils.Repair_Process_Logger.log(f"Begin Analyze {m_state.get('bug_id')}")
+        start_time = utils.get_time()
+        signature_method_map, methods_tests_map, method_test_path_map = program_analysis_repository(
+            m_state.get('bug_benchmark').get_work_dir(),
+            m_state.get('bug_benchmark').get_source_dir(),
+            m_state.get('bug_benchmark').get_build_dir(),
+            m_state.get('bug_benchmark').get_test_build_dir(),
+            list(m_state.get('failed_test_cases').keys()),
+            m_state.get('bug_benchmark').get_fault_location_file())
+        utils.output_prepare_info(m_state.get('database_name'), m_state.get('bug_id'),
+                                  signature_method_map, methods_tests_map, method_test_path_map)
+        utils.Repair_Process_Logger.log(f"End Analyze {m_state.get('bug_id')}")
+        end_time = utils.get_time()
+        utils.Repair_Process_Logger.log(f"Program Analysis Time: {end_time - start_time} s.")
+    else:
+        signature_method_map, methods_tests_map, method_test_path_map = utils.load_prepare_info(
+            m_state.get('database_name'), m_state.get('bug_id'))
+    m_state['fault_codes_list'], m_state['fault_files'] = utils.codes_format_transform(
+        list(signature_method_map.values()))
+    if utils.Enable_FMC:
+        faulty_methods_clustering(m_state, signature_method_map, methods_tests_map, method_test_path_map)
+    else:
+        init_repair_agent(m_state, signature_method_map, method_test_path_map)
     return m_state
-
-
-def program_analysis_repository(root_dir, source_dir, class_dir, test_build_dir, initial_failing_tests, fault_loc_file):
-    signature_method_map, methods_tests_map, method_test_path_map = program_analysis(
-        root_dir,
-        source_dir,
-        class_dir,
-        fault_loc_file,
-        initial_failing_tests,
-        test_build_dir)
-    signature_method_map = eval(signature_method_map.strip())
-    methods_tests_map = eval(methods_tests_map.strip())
-    method_test_path_map = eval(method_test_path_map.strip())
-    for fault_code_info in signature_method_map.values():
-        fault_code_info['file_path'] = os.path.join(source_dir,
-                                                    fault_code_info.get('file_path'))
-        fault_code_info['fault_code'] = get_codes_from_file(
-            os.path.join(root_dir, fault_code_info['file_path']),
-            fault_code_info.get('line_begin'), fault_code_info.get('line_end'))
-        fault_code_info['repaired_code'] = fault_code_info['fault_code']
-        utils.decode_code_list(fault_code_info['similar_methods'])
-        utils.decode_code_list(fault_code_info['fault_line_codes'])
-    return signature_method_map, methods_tests_map, method_test_path_map
 
 
 def get_fault_codes_by_key(signature_method_map, methods):
@@ -123,17 +100,14 @@ def faulty_methods_clustering(m_state: MAgentState, signature_method_map, method
         agent_state['fault_codes'] = get_fault_codes_by_key(signature_method_map, methods)
         agent_state['relative_suspicious_paths'] = get_invocation_chain_paths(agent_state.get('fault_codes'),
                                                                               method_test_path_map)
-        agent_state['working_dir'] = m_state.get('working_dir')
-        agent_state['compile_jar_path'] = m_state.get('compile_jar_path')
-        agent_state['source_dir_path'] = m_state.get('source_dir_path')
-        agent_state['class_dir_path'] = m_state.get('class_dir_path')
-        agent_state['test_build_path'] = m_state.get('test_build_path')
+        agent_state['bug_benchmark'] = m_state.get('bug_benchmark')
         fault_codes, fault_files = utils.codes_format_transform(list(agent_state.get('fault_codes').values()))
         agent_state['fault_codes_list'] = fault_codes
         agent_state['fault_files'] = fault_files
         agent_state['key_tokens'] = {}
         for fault_file in fault_files:
-            agent_state['key_tokens'][fault_file] = key_token_mining(agent_state.get('working_dir'), fault_file)
+            agent_state['key_tokens'][fault_file] = key_token_mining(agent_state.get('bug_benchmark').get_work_dir(),
+                                                                     fault_file)
         agent_state['repair_state'] = RepairState(fault_analysis_result="", repair_count=0,
                                                   repair_result=RepairStateEnum.NOT_REPAIRED, repair_history="",
                                                   repair_exception="", prompt_tokens=0, completion_tokens=0)
@@ -146,19 +120,19 @@ def init_repair_agent(m_state: MAgentState, signature_method_map, method_test_pa
     m_state['agent_states'] = []
     agent_state = {'bug_id': m_state.get('bug_id'), 'database_name': m_state.get('database_name'), 'pid': 1,
                    'failed_test_cases': [], 'fault_codes': signature_method_map,
-                   'working_dir': m_state.get('working_dir'), 'compile_jar_path': m_state.get('compile_jar_path'),
-                   'source_dir_path': m_state.get('source_dir_path'), 'class_dir_path': m_state.get('class_dir_path'),
-                   'test_build_path': m_state.get('test_build_path'),
+                   'bug_benchmark': m_state.get('bug_benchmark'),
                    'fault_codes_list': m_state.get('fault_codes_list'), 'fault_files': m_state.get('fault_files'),
                    'repair_state': RepairState(fault_analysis_result="", repair_count=0,
                                                repair_result=RepairStateEnum.NOT_REPAIRED, repair_history="",
                                                repair_exception="", prompt_tokens=0, completion_tokens=0),
                    'key_tokens': {}}
     for fault_file in agent_state.get('fault_files'):
-        agent_state['key_tokens'][fault_file] = key_token_mining(agent_state.get('working_dir'), fault_file)
+        agent_state['key_tokens'][fault_file] = key_token_mining(agent_state.get('bug_benchmark').get_work_dir(), fault_file)
     agent_state['relative_suspicious_paths'] = get_invocation_chain_paths(agent_state.get('fault_codes'),
                                                                           method_test_path_map)
     agent_state['failed_test_cases'] = list(m_state.get('failed_test_cases').values())
+    print(m_state.get('failed_test_cases'))
+    print(agent_state['failed_test_cases'] )
     m_state['agent_states'].append(agent_state)
     m_state['merged_agents'] = {tuple(m_state.get('failed_test_cases').keys()): [agent_state]}
 
@@ -211,13 +185,15 @@ def combine_and_test(m_state: MAgentState):
     m_state['repair_result'] = RepairStateEnum.REPAIR_TEST_SUCCESS
     for tests, agent_group in m_state['merged_agents'].items():
         file_list = compile_agent_group(m_state, agent_group)
-        test_result = run_test_cases(m_state.get('database_name'), m_state.get('working_dir'),
-                                     m_state.get('test_source_dir_path'), tests)
+        test_result = m_state.get('bug_benchmark').test_failed_test_cases(tests)
         if len(test_result) == 0:
             print("The merged agent group passed all the failed test cases!")
             utils.Repair_Process_Logger.log("The merged agent group passed all the failed test cases!")
             for agent_state in agent_group:
                 agent_state['repair_state']['repair_result'] = RepairStateEnum.REPAIR_TEST_SUCCESS
+            if len(m_state['merged_agents']) > 1:
+                utils.recover_files(m_state.get('bug_benchmark').get_work_dir(), file_list)
+                m_state.get('bug_benchmark').recover_files(file_list)
         else:
             print(
                 f"The merged agent group did not pass the failed test cases with the following info {str(test_result)}."
@@ -228,9 +204,8 @@ def combine_and_test(m_state: MAgentState):
             for agent_state in agent_group:
                 agent_state['repair_state']['repair_result'] = RepairStateEnum.REPAIR_TEST_FAILED
                 m_state['repair_result'] = RepairStateEnum.REPAIR_TEST_FAILED
-        recover_files(m_state.get('working_dir'), file_list)
-        compile_files(m_state.get('database_name'), m_state.get('working_dir'),
-                      m_state.get('compile_jar_path'), file_list)
+            utils.recover_files(m_state.get('bug_benchmark').get_work_dir(), file_list)
+            m_state.get('bug_benchmark').recover_files(file_list)
     return m_state
 
 
@@ -246,41 +221,38 @@ def compile_agent_group(m_state: MAgentState, agent_group):
     for file_path, fault_code_snippets in file_fault_codes_map.items():
         fault_codes.append({"file_path": file_path, "fault_code_snippets": fault_code_snippets})
     fault_files = list(file_fault_codes_map.keys())
-    modify_files(m_state.get('working_dir'), fault_codes)
-    compile_files(m_state.get('database_name'), m_state.get('working_dir'),
-                  m_state.get('compile_jar_path'), fault_files)
+    utils.modify_files(m_state.get('bug_benchmark').get_work_dir(), fault_codes)
+    m_state.get('bug_benchmark').compile_files(fault_files)
     return fault_files
 
 
 def continue_to_overall_compile(m_state: MAgentState):
     # repair_success = True
-    modify_files(m_state.get('working_dir'), m_state.get('fault_codes_list'))
-    compile_project(m_state.get('database_name'), m_state.get('bug_id'), m_state.get('working_dir'))
+    utils.modify_files(m_state.get('bug_benchmark').get_work_dir(), m_state.get('fault_codes_list'))
+    m_state.get('bug_benchmark').compile_project()
     return m_state
 
 
-def test_analysis(test_result, a_state: AgentState, repair_success):
-    failing_test_methods = list(test_result.keys())
-    related_tests = related_analysis(a_state.get('working_dir'), a_state.get('source_dir_path'),
-                                     a_state.get('class_dir_path'), failing_test_methods,
-                                     a_state.get('test_build_path'), list(a_state.get('fault_codes').keys()))
-    if len(related_tests) == 0:
-        a_state['repair_state']['repair_result'] = repair_success
-        a_state['failed_test_cases'] = []
-        return True
-        # print(f"Repair {a_state.get('fault_files')} successfully!")
-    else:
-        a_state['repair_state']['repair_result'] = RepairStateEnum.REPAIR_FAILED
-        a_state['failed_test_cases'] = list(test_result.values())
-        return False
+# def test_analysis(test_result, a_state: AgentState, repair_success):
+#     failing_test_methods = list(test_result.keys())
+#     related_tests = related_analysis(a_state.get('working_dir'), a_state.get('source_dir_path'),
+#                                      a_state.get('class_dir_path'), failing_test_methods,
+#                                      a_state.get('test_build_path'), list(a_state.get('fault_codes').keys()))
+#     if len(related_tests) == 0:
+#         a_state['repair_state']['repair_result'] = repair_success
+#         a_state['failed_test_cases'] = []
+#         return True
+#         # print(f"Repair {a_state.get('fault_files')} successfully!")
+#     else:
+#         a_state['repair_state']['repair_result'] = RepairStateEnum.REPAIR_FAILED
+#         a_state['failed_test_cases'] = list(test_result.values())
+#         return False
 
 
 def test_all_cases(m_state: MAgentState):
     # Test All
     try:
-        failing_test_num, test_result = test_project(m_state.get('database_name'), m_state.get('bug_id'),
-                                                     m_state.get('working_dir'),
-                                                     m_state.get('test_source_dir_path'))
+        failing_test_num, test_result = m_state.get('bug_benchmark').test_project()
         if len(test_result) == 0:
             m_state['repair_result'] = RepairStateEnum.REPAIR_SUCCESS
             for a_state in m_state.get('agent_states'):
@@ -292,19 +264,25 @@ def test_all_cases(m_state: MAgentState):
             if failing_test_num < 30:
                 m_state['repair_result'] = RepairStateEnum.REPAIR_SUCCESS
                 for a_state in m_state.get('agent_states'):
-                    if not test_analysis(test_result, a_state, RepairStateEnum.REPAIR_SUCCESS):
-                        m_state['repair_result'] = RepairStateEnum.REPAIR_FAILED
-                if m_state['repair_result'] == RepairStateEnum.REPAIR_SUCCESS:
-                    print(m_state.get(
-                        "bug_id") + f"passed all the related test cases, but failed unrelated test cases: {str(test_result)}.")
-                    utils.Repair_Process_Logger.log(m_state.get(
-                        "bug_id") + f"passed all the related test cases, but failed unrelated test cases: {str(test_result)}.")
-                else:
-                    print(f"The repaired codes did not pass the test cases with the following info {str(test_result)}. "
-                          f"Please regenerate the repaired code.")
-                    utils.Repair_Process_Logger.log(
-                        f"The repaired codes did not pass the test cases with the following info {str(test_result)}. "
-                        f"Please regenerate the repaired code.")
+                    # if not test_analysis(test_result, a_state, RepairStateEnum.REPAIR_SUCCESS):
+                    a_state['repair_state']['repair_result'] = RepairStateEnum.REPAIR_FAILED
+                # if m_state['repair_result'] == RepairStateEnum.REPAIR_SUCCESS:
+                #     print(m_state.get(
+                #         "bug_id") + f"passed all the related test cases, but failed unrelated test cases: {str(test_result)}.")
+                #     utils.Repair_Process_Logger.log(m_state.get(
+                #         "bug_id") + f"passed all the related test cases, but failed unrelated test cases: {str(test_result)}.")
+                # else:
+                #     print(f"The repaired codes did not pass the test cases with the following info {str(test_result)}. "
+                #           f"Please regenerate the repaired code.")
+                #     utils.Repair_Process_Logger.log(
+                #         f"The repaired codes did not pass the test cases with the following info {str(test_result)}. "
+                #         f"Please regenerate the repaired code.")
+                m_state['repair_result'] = RepairStateEnum.REPAIR_FAILED
+                print(f"The repaired codes did not pass the test cases with the following info {str(test_result)}. "
+                      f"Please regenerate the repaired code.")
+                utils.Repair_Process_Logger.log(
+                    f"The repaired codes did not pass the test cases with the following info {str(test_result)}. "
+                    f"Please regenerate the repaired code.")
             else:
                 raise Exception(
                     "The repaired codes passed the failed test cases, but when testing the all project, it failed more than 30 test cases.")
@@ -320,23 +298,24 @@ def test_all_cases(m_state: MAgentState):
 
 def recover_codes(m_state: MAgentState):
     # recover code
-    recover_files(m_state.get('working_dir'), m_state.get('fault_files'))
-    compile_files(m_state.get('database_name'), m_state.get('working_dir'),
-                  m_state.get('compile_jar_path'), m_state.get('fault_files'))
+    utils.recover_files(m_state.get('bug_benchmark').get_work_dir(), m_state.get('fault_files'))
+    m_state.get('bug_benchmark').recover_files(m_state.get('fault_files'))
     return m_state
 
 
 def postprocessor(m_state: MAgentState):
     if m_state.get('repair_result') == RepairStateEnum.REPAIR_SUCCESS:
-        generate_patch_diff(m_state.get('bug_id'), m_state.get('working_dir'), m_state.get('fault_files'))
-        generate_patch_file(m_state.get('bug_id'), m_state.get('fault_codes_list'))
+        utils.generate_patch_diff(m_state.get('bug_id'), m_state.get('bug_benchmark').get_work_dir(),
+                                  m_state.get('fault_files'))
+        utils.generate_patch_file(m_state.get('bug_id'), m_state.get('fault_codes_list'))
         utils.Repair_Result = True
         max_iterative_count = 0
         for agent_state in m_state.get('agent_states'):
             if agent_state.get('repair_state').get('repair_count') > max_iterative_count:
                 max_iterative_count = agent_state.get('repair_state').get('repair_count')
         utils.Repair_Iterative_Count = max_iterative_count
-
+        utils.recover_files(m_state.get('bug_benchmark').get_work_dir(), m_state.get('fault_files'))
+        m_state.get('bug_benchmark').recover_files(m_state.get('fault_files'))
     else:
         print("Repair failed!")
         utils.Repair_Process_Logger.log("Repair failed!")

@@ -35,7 +35,7 @@ def repair_choose(state: AgentState):
             state.get('repair_state').get('repair_result') == RepairStateEnum.REPAIR_SUCCESS):
         return END
     if (state.get('repair_state').get('repair_result') == RepairStateEnum.REPAIR_EXCEPTION or
-            state.get('repair_state').get('repair_result') == RepairStateEnum.REPAIR_FORMAT_ERROR):
+            state.get('repair_state').get('repair_result') == RepairStateEnum.REPAIR_FORMAT_ERROR) or state.get('repair_state').get('repair_result') == RepairStateEnum.NOT_REPAIRED:
         if state.get('repair_state').get('repair_count') >= utils.MAX_ITERATIONS:
             return END
         if utils.Enable_DualAgent:

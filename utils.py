@@ -3,11 +3,12 @@ import json
 import shutil
 import difflib
 import pickle
+import time
+
 from langchain_openai import ChatOpenAI
 import tiktoken
-
-import basic_framework.fault_localization
-import defects4j_tools.defects4j
+import jpype
+import multiprocessing
 
 
 def read_json(filepath):
@@ -42,19 +43,6 @@ def get_custom_llm():
     return ChatOpenAI(openai_api_key=config[model_name].get("api_key"), openai_api_base=config[model_name].get("base_url"),
                    model_name=config[model_name].get("model_name"), temperature=1), model_name
 
-
-environment_config = read_json("Config/defects4j_environment.json")
-JAVA_7_HOME = environment_config["JAVA_7_HOME"]
-JAVA_8_HOME = environment_config["JAVA_8_HOME"]
-Defects4J_DIR = environment_config["Defects4J_DIR"]
-Defects4J_V2_DIR = environment_config["Defects4J_V2_DIR"]
-JAVA7_CMD = (" && ".join([f"export JAVA_HOME=\"{JAVA_7_HOME}\"", "export CLASS_PATH=\"$JAVA_HOME/lib\"",
-                          "export PATH=.$PATH:\"$JAVA_HOME/bin\""]))
-JAVA8_CMD = (" && ".join([f"export JAVA_HOME=\"{JAVA_8_HOME}\"", "export CLASS_PATH=\"$JAVA_HOME/lib\"",
-                          "export PATH=.:\"$JAVA_HOME/bin\":$PATH"]))
-Defects4J_CMD = (" && ".join([JAVA7_CMD, f"export PATH=.$PATH:\"{Defects4J_DIR}/framework/bin\""]))
-Defects4J_V2_CMD = (" && ".join([JAVA8_CMD, f"export PATH=.$PATH:\"{Defects4J_V2_DIR}/framework/bin\""]))
-TEMP_DIR = environment_config["TEMP_DIR"]
 CUSTOM_MODEL, MODEL_NAME = get_custom_llm()
 ROOT_PATH = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = "output" + os.sep + MODEL_NAME
@@ -131,7 +119,6 @@ def recover_files(base_dir, file_list):
 
 
 def check_file_list(working_dir, file_list):
-    # working_dir = os.path.join(utils.TEMP_DIR, bug_id)
     for file in file_list:
         if not os.path.exists(os.path.join(working_dir, file)):
             return False
@@ -187,7 +174,7 @@ def encoding_count(input: str) -> int:
 
 
 def generate_patch_diff(bug_id, working_dir, file_list):
-    output_dir = os.path.join(OUTPUT_DIR, bug_id.split("-")[0], bug_id.split("-")[1])
+    output_dir = os.path.join(OUTPUT_DIR, bug_id)
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     diff_file = os.path.join(output_dir, f"patch-{MAX_ITERATIONS}.diff")
@@ -198,7 +185,7 @@ def generate_patch_diff(bug_id, working_dir, file_list):
 
 
 def generate_patch_file(bug_id, fault_codes_list):
-    output_dir = os.path.join(OUTPUT_DIR, bug_id.split("-")[0], bug_id.split("-")[1])
+    output_dir = os.path.join(OUTPUT_DIR, bug_id)
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     open(os.path.join(output_dir, f"{bug_id}-{MAX_ITERATIONS}.java"), 'w').close()
@@ -222,7 +209,6 @@ def remove_temp_dir(working_dir):
 
 
 def modify_file(working_dir: str, file: str, repaired_snippets: list):
-    # working_dir = os.path.join(utils.TEMP_DIR, bug_id)
     folder_list = file.split(os.sep)[:-1]
     temp_dir = os.path.join(get_temp_dir(working_dir), os.sep.join(folder_list))
     if not os.path.exists(temp_dir):
@@ -247,7 +233,6 @@ def modify_file(working_dir: str, file: str, repaired_snippets: list):
 
 
 def modify_file_pre(working_dir: str, code_info):
-    # working_dir = os.path.join(utils.TEMP_DIR, bug_id)
     with open(os.path.join(os.path.join(working_dir, code_info["file_path"])), 'r', encoding='utf-8', errors='ignore') as f:
         data = f.readlines()
     begin_index = 0
@@ -359,6 +344,19 @@ def output_prepare_info(dataset, bug_id, signature_method_map, methods_tests_map
         pickle.dump(method_test_path_map, file)
 
 
+def load_signature_method_map(dataset, bug_id):
+    dir_path = os.path.join(ANALYSIS_DIR, dataset, bug_id)
+    if os.path.exists(os.path.join(dir_path, 'signature_method_map.pickle')):
+        with open(os.path.join(dir_path, 'signature_method_map.pickle'), 'rb') as file:
+            return pickle.load(file)
+    else:
+        return {}
+
+
+def get_time():
+    return time.time()
+
+
 def load_method_test_path_map(dataset, bug_id):
     dir_path = os.path.join(ANALYSIS_DIR, dataset, bug_id)
     if os.path.exists(os.path.join(dir_path, 'method_test_path_map.pickle')):
@@ -395,9 +393,44 @@ def cal_token(*args):
     return lenth // 2
 
 
-def init_defects4j_trans_env(database_name, bug_id, working_dir):
-    json_file = f"datasets/{database_name}/fault_location/single_function_repair_trans_final_fl.json"
-    with open(json_file, 'r', encoding='utf-8') as file:
-        single_function_bugs = json.load(file)
-    code_info = single_function_bugs.get(bug_id)
-    modify_file_pre(working_dir, code_info)
+def get_test_code(working_dir, test_source_dir, test_class, test_method):
+    if test_cases_codes_map.get(f"{test_class}::{test_method}") is None:
+        # test_source_dir = "test"
+        test_file = os.path.join(working_dir, test_source_dir, "/".join(test_class.split(".")) + ".java")
+        codes = get_method_code(test_file, test_method)
+        test_cases_codes_map[f"{test_class}::{test_method}"] = codes
+    return test_cases_codes_map.get(f"{test_class}::{test_method}")
+
+
+def get_method_code(file_path, method_name, including_line=-1):
+    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+        java_code = f.read()
+    with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+        data = f.readlines()
+    start_line, end_line = get_method_position(java_code, method_name, including_line)
+    code_snippet = ""
+    for i in range(start_line - 1, end_line):
+        code_snippet += data[i]
+    return code_snippet
+
+
+def get_method_position_working(queue, java_code, method_name, in_line):
+    jvm_path = jpype.getDefaultJVMPath()
+    javaparser_path = os.path.join(".", "java_lib", "context-extractor.jar")
+    jpype.startJVM(jvm_path, "-ea", "-Djava.class.path=%s" % javaparser_path)
+    JClass = jpype.JClass("ProgramAnalysis")
+    position = JClass.getMethodPosition(java_code, method_name, in_line)
+    queue.put(str(position))
+    # Shut down JVM
+    jpype.shutdownJVM()
+    return position
+
+
+def get_method_position(java_code, method_name, in_line=-1):
+    queue = multiprocessing.Queue()
+    process = multiprocessing.Process(target=get_method_position_working,
+                                      args=(queue, java_code, method_name, in_line))
+    process.start()
+    process.join()
+    position = queue.get()
+    return int(position.split(",")[0]), int(position.split(",")[1])

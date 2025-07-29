@@ -1,6 +1,5 @@
 # PReMM: LLM-Based Program Repair for Multi-Method Bugs via Divide and Conquer
----
-[![DOI](https://zenodo.org/badge/1010088633.svg)](https://doi.org/10.5281/zenodo.15762224)
+
 ---
 
 ## 1. Introduction
@@ -21,12 +20,17 @@ The purpose of this artifact is to support the claims made in our paper titled "
 PReMM
 ├── Config
 │   ├── defects4j_environment.json
+│   ├── gitbug_java_environment.json
 │   ├── llm_config.json
 │   └── prompt.py
 ├── Overview.pdf
+├── Overview.png
+├── PReMM-gitbug.zip
 ├── README.md
+├── Results.zip
 ├── baselines.zip
 ├── basic_framework
+│   ├── __init__.py
 │   ├── agent_state.py
 │   ├── all_enum.py
 │   ├── main_edge.py
@@ -37,18 +41,26 @@ PReMM
 │   ├── repair_edge.py
 │   ├── repair_graph.py
 │   └── repair_nodes.py
-├── defects4j_tools
-│   ├── fault_location
+├── benchmark
+│   ├── __init__.py
+│   ├── benchmark.py
 │   ├── defects4j.py
-│   ├── fault_localization.py
-│   └── validation.py
+│   ├── gitbug_java.py
+│   └── new_benchmark.py
+├── datasets
+│   ├── defects4j-trans
+│   ├── defects4jv1.2
+│   ├── defects4jv2
+│   └── gitbug-java
 ├── java_lib
 │   └── context-extractor.jar
 ├── logger.py
-├── prepare_project.py
+├── output.zip
+├── poetry.lock
 ├── pyproject.toml
 ├── run.py
 └── utils.py
+
 ```
 
 ### Overview of the Artifact
@@ -62,12 +74,12 @@ The Artifact implementation consists of two integrated components:
 
 The Java analysis module is invoked by Python through two interfaces in `basic_framework/program_analysis.py`:
 
-1. `program_analysis()`: Performs core dependency analysis
+1. `program_analysis_repository()`: Performs core dependency analysis
    - Inputs:
      - `root_dir`: Repository root (e.g., `/tmp/Chart-1`)
      - `source_dir`: Source code directory (e.g., `source`)
      - `class_dir`: Compiled classes path (e.g., `build/classes`)
-     - `fault_loc_file`: File containing fault locations (e.g., `defects4j_tools/fault_location/defects4j/chart/1`)
+     - `fault_loc_file`: File containing fault locations (e.g., `datasets/defects4jv1.2/fault_location/defects4j/chart/1`)
      - `test_build_dir`: Test classes path (e.g., `build/test`)
      - `test_names`: List of failing tests (e.g., `["com.google.javascript.jscomp.ClosureReverseAbstractInterpreterTest::testGoogIsArray2"]`)
    - Outputs:
@@ -110,7 +122,7 @@ The Java component (`context-extractor.jar`) handles:
 | Faulty Method Clustering    | 3.1           | Supported | DependencyAnalysis.java      | java_lib/context-extractor.jar                   | Implements repository call graph construction, test-wise clustering, and invocation-wise clustering. |
 | Invocation Chain Extraction | 3.2           | Supported | DependencyAnalysis.java      | java_lib/context-extractor.jar                   | Extracts test-to-method invocation chains stored in method_test_path_map                             |
 | Similar Code Search         | 3.2           | Supported | Searcher.java                | java_lib/context-extractor.jar                   | Finds project-wide similar implementations for faulty methods                                        |
-| Key Token Mining            | 3.2           | Supported |                              | java_lib/context-extractor.jar                   | Implements signaturesMining in ProgramAnalysis.java                                                  |
+| Key Token Mining            | 3.2           | Supported | ProgramAnalysis.java         | java_lib/context-extractor.jar                   | Implements signaturesMining in ProgramAnalysis.java                                                  |
 | Dual-Agent Patch Generation | 3.3           | Supported | Repair Orchestration Modules | repair_graph.py, repair_nodes.py, repair_edge.py | Implements cooperative agent framework for patch generation per invocation-wise group                |
 
 ## 2. Hardware Dependencies
@@ -175,7 +187,7 @@ poetry install --no-root
 
 ### Dataset Preparation
 
-#### Defects4J v1.4
+#### Defects4J v1.2
 
 - Install Defects4Jv1.4.0 (a more stable version of v1.2) from https://github.com/rjust/defects4j/tags
 - JDK 1.7 for Defects4Jv1.4
@@ -183,6 +195,8 @@ poetry install --no-root
 - Defects4Jv1.4 Initialization
 
 ```shell
+wget https://github.com/rjust/defects4j/releases/download/v1.4.0/defects4j-1.4.0.zip
+unzip defects4j-1.4.0.zip
 cd defects4j-1.4.0
 ./init.sh
 ```
@@ -195,6 +209,8 @@ cd defects4j-1.4.0
 - Defects4Jv2.0 Initialization
 
 ```shell
+wget https://github.com/rjust/defects4j/releases/download/v2.0.1/defects4j-2.0.1.zip
+unzip defects4j-2.0.1.zip
 cd defects4j-2.0.1
 ./init.sh
 ```
@@ -221,7 +237,7 @@ Modify the `Config/defects4j_enviroment.json`
 
 #### LLM Configuration
 
-Since PReMM is an LLM-based tool, you can choose the following LLMs and enter your own api key. 
+Since PReMM is an LLM-based tool, you can choose the following LLMs and enter your own api key.
 You can also choose other LLMs by modifying the `Config/llm_config.json`, adding a new LLM to the `Config/llm_config.json` file.
 
 In our work, we use Qwen2.5-72B as our LLM.
@@ -256,7 +272,7 @@ PReMM tool is invoked using the command line interface offered by `run.py`.
 
 ### The command line arguments
 
-- `--dataset` , the current dataset you are target to repair, e.g., `defects4j` or `defects4jv2`.
+- `--dataset` , the current dataset you are target to repair, e.g., `defects4jv1.2` or `defects4jv2`.
 - `--bug_id`, the target bug that you want to repair, e.g., `Chart-1`. If you want to repair all the bugs in the dataset, set it to `all`.
 - `--chain_length` , the maximum iterative number, default is 5.
 - `-f`, flag that enable faulty methods clustering.
@@ -266,7 +282,7 @@ PReMM tool is invoked using the command line interface offered by `run.py`.
 ### Plausible patches generation
 
 ```shell
-poetry run python run.py --dataset defects4j --bug_id Lang-7 -f -c -d --chain_length 5
+poetry run python run.py --dataset defects4jv1.2 --bug_id Lang-7 -f -c -d --chain_length 5
 ```
 
 ### Output
@@ -277,17 +293,17 @@ After running PReMM, your output directory structure should be like the followin
 output
 └── Qwen2.5-72B-Local
     └── PReMM
-        └── defects4j
-            └── Lang
-                ├── 7
-                │   ├── Lang-7-5.java
-                │   ├── patch-5.diff
+        └── defects4jv1.2
+            └── Lang-7
+                ├── Lang-7-5.java
                 ├── Lang-7-5.log
+                ├── patch-5.diff
                 └── repair_result-5.csv
+
 
 ```
 
-- If the final patch generated by PReMM pass all the test cases, we consider it as a plausible patch, and will store the patch in `bug/id/patch-{Chain_Length}.diff`,e.g., `Lang/7/patch-{Chain_Length}.diff`
+- If the final patch generated by PReMM pass all the test cases, we consider it as a plausible patch, and will store the patch in `output/{model_name}/PReMM/defects4jv1.2/bug_id/patch-{Chain_Length}.diff`,e.g., `Lang-7/patch-{Chain_Length}.diff`
 - All the repair process of PReMM are stored in `Lang-7-{Chain_Length}.log`
 - We also stores additional information in `repair_results-{Chain_Length}.scv`
   - **Bug_id**: The target bug id
@@ -307,7 +323,7 @@ The directory structure for the static analysis results is as follows:
 
 ```shell
 analysis_output
-└── defects4j
+└── defects4jv1.2
     └── Lang-7
         ├── method_test_path_map.pickle
         ├── methods_tests_map.pickle
@@ -325,7 +341,7 @@ analysis_output
 Set the `bug_id` to `all`, `chain_length` to 5, and enable the flags `-f`, `-c`, and `-d` to enable faulty methods clustering, context extraction, and dual-agent-based patch generation. Then you can get the experiments results of PReMM in Section 4.5.1.
 
 ```shell
-poetry run python run.py --dataset defects4j --bug_id all -f -c -d --chain_length 5
+poetry run python run.py --dataset defects4jv1.2 --bug_id all -f -c -d --chain_length 5
 ```
 
 This will take a long time to finish. But you can stop the process at any time. We provide the output of the previous run in the `output` directory. So Next time you run the command, PReMM will continue from the last bug.
@@ -333,7 +349,7 @@ This will take a long time to finish. But you can stop the process at any time. 
 For quick evaluation, we recommend you to run single bug at a time.
 
 ```shell
-poetry run python run.py --dataset defects4j --bug_id Lang-7 -f -c -d --chain_length 5
+poetry run python run.py --dataset defects4jv1.2 --bug_id Lang-7 -f -c -d --chain_length 5
 ```
 
 #### Ablation Study in Section 4.5.3
@@ -341,49 +357,49 @@ poetry run python run.py --dataset defects4j --bug_id Lang-7 -f -c -d --chain_le
 - PReMM-FCDI: When set `chain_length` to 1, disable the flags `-f`, `-c`, and `-d` to disable faulty methods clustering, context extraction, and dual-agent-based patch generation. We can get the results of PReMM-FCDI in Section 4.5.3.
 
 ```shell
-poetry run python run.py --dataset defects4j --bug_id all --chain_length 1
+poetry run python run.py --dataset defects4jv1.2 --bug_id all --chain_length 1
 ```
 
 - PReMM-FCD: When set `chain_length` to 5, disable the flags `-f`, `-c`, and `-d`. We can get the results of PReMM-FCD in Section 4.5.3.
 
 ```shell
-poetry run python run.py --dataset defects4j --bug_id Lang-7 --chain_length 5
+poetry run python run.py --dataset defects4jv1.2 --bug_id Lang-7 --chain_length 5
 ```
 
 - PReMM-FC: When set `chain_length` to 5, disable the flags `-f`, `-c`, and enable `-d`. We can get the results of PReMM-FC in Section 4.5.3.
 
 ```shell
-poetry run python run.py --dataset defects4j --bug_id all --chain_length 5 -d
+poetry run python run.py --dataset defects4jv1.2 --bug_id all --chain_length 5 -d
 ```
 
 - PReMM-FD: When set `chain_length` to 5, disable the flags `-f`, `-d`, and enable `-c`. We can get the results of PReMM-FD in Section 4.5.3.
 
 ```shell
-poetry run python run.py --dataset defects4j --bug_id all --chain_length 5 -c
+poetry run python run.py --dataset defects4jv1.2 --bug_id all --chain_length 5 -c
 ```
 
 - PReMM-CD: When set `chain_length` to 5, disable the flags `-c`, `-d`, and enable `-f`. We can get the results of PReMM-CD in Section 4.5.3.
 
 ```shell
-poetry run python run.py --dataset defects4j --bug_id all --chain_length 5 -f
+poetry run python run.py --dataset defects4jv1.2 --bug_id all --chain_length 5 -f
 ```
 
 - PReMM-F: When set `chain_length` to 5, disable the flags `-f`, and enable `-c`,`-d`. We can get the results of PReMM-F in Section 4.5.3.
 
 ```shell
-poetry run python run.py --dataset defects4j --bug_id all --chain_length 5 -d -c
+poetry run python run.py --dataset defects4jv1.2 --bug_id all --chain_length 5 -d -c
 ```
 
 - PReMM-C: When set `chain_length` to 5, disable the flags `-c`, and enable `-f`,`-d`. We can get the results of PReMM-C in Section 4.5.3.
 
 ```shell
-poetry run python run.py --dataset defects4j --bug_id all --chain_length 5 -d -f
+poetry run python run.py --dataset defects4jv1.2 --bug_id all --chain_length 5 -d -f
 ```
 
 - PReMM-D: When set `chain_length` to 5, disable the flags `-d`, and enable `-c`,`-f`. We can get the results of PReMM-D in Section 4.5.3.
 
 ```shell
-poetry run python run.py --dataset defects4j --bug_id all --chain_length 5 -c -f
+poetry run python run.py --dataset defects4jv1.2 --bug_id all --chain_length 5 -c -f
 ```
 
 #### Result.zip
@@ -405,50 +421,223 @@ The `baselines.zip` contains the results of the following baselines:
 | **ChatRepair**   | https://figshare.com/s/9796028cef4d7dbc08ff |
 | **ThinkRepair**  | https://github.com/vinci-grape/ThinkRepair  |
 
-## 5 Reusability Guide
+## 5 Replicate Defects4J-Trans and Gitbug-Java Experiment 
 
-The artifact is designed to be reusable for research purposes. It includes all the necessary components to reproduce the experiments and analyze the results.
+We added experiments on the Defects4J-Trans and Gitbug-Java benchmarks in Section 5 (Section Discussion) to further validate PReMM's repair capabilities.
 
-#### Static Analysis Module
+#### Replicate Defects4J-Trans
 
-The Java analysis module is invoked by Python through two interfaces in `basic_framework/program_analysis.py`:
+No additional dataset preparation is required, as Defects4J-Trans is built upon Defects4J v2.0.
 
-1. `program_analysis()`: Performs core dependency analysis
-   - Inputs:
-     - `root_dir`: Repository root (e.g., `/tmp/Chart-1`)
-     - `source_dir`: Source code directory (e.g., `source`)
-     - `class_dir`: Compiled classes path (e.g., `build/classes`)
-     - `fault_loc_file`: File containing fault locations (e.g., `datasets/defects4j/fault_location/groundtruth/chart/1`)
-       - If you want to successfully reuse this artifact to new datasets, the fault location file should be in the same format as the one provided in the `defects4j_tools/fault_location/defects4j` directory.
-       - ```shell
-         org.jfree.chart.renderer.category.AbstractCategoryItemRenderer.getLegendItems:1797
-         ```
-     - `test_build_dir`: Test classes path (e.g., `build/test`)
-     - `test_names`: List of failing tests (e.g., `["com.google.javascript.jscomp.ClosureReverseAbstractInterpreterTest::testGoogIsArray2"]`)
-   - Outputs:
-     - `signature_method_map`: Faulty method signatures mapped to metadata (line ranges) and `similar_codes` (possibly empty if no similar implementations exist).
-     - `methods_tests_map`: Invocation-wise groupings of faulty methods to their covering test cases
-     - `method_test_path_map`: Invocation chains from tests to faulty methods (per method signature)
-2. `key_token_mining()`: Extracts critical tokens for repair
-   - Inputs:
-     - `root_dir`: Repository root (e.g., `/tmp/Chart-1`)
-     - `file_path`: Target analysis file path (e.g., `source/org/apache/commons/math3/stat/inference/ChiSquareTest.java`)
-   - Output
-     - `key_tokens`: key tokens mined in the current file.
+To run PReMM on Defects4J-Trans:
 
-#### Python Repair Module
+##### ✅ Single Bug Execution
 
-If you want to adapt the Python repair module to support new datasets, modifications may be required in the Patch Validation Module of the Python framework.
+```shell
+poetry run python run.py --dataset defects4j-trans --bug_id Chart-26 -f -c -d --chain_length 5
+```
+##### ✅ All Bugs Execution
+```shell
+poetry run python run.py --dataset defects4j-trans --bug_id all -f -c -d --chain_length 5
+```
 
-⚠️ Limitation Acknowledgment:
+#### Replicate Gitbug-Java 
+GitBug-Java is a new benchmark for program repair evaluation. It requires strict environment:
 
-This artifact acknowledges its limitations due to differences in compilation and testing environments across various datasets. You may need to adjust build scripts, test runners, or validation logic depending on the structure of your new dataset.
+##### 📦 System Requirements
 
-## Planned Revisions for Artifact Evaluation
+- Ubuntu/Debian with GLIBC 2.32 or 2.34
+- Minimum 140GB disk space
+- Alternatively, use an Ubuntu VM (minimum 140GB disk)
+Please check the step by step process here: https://github.com/gitbugactions/gitbug-java
 
-- **Current Paper Status**: Under Major Revision
-- **Planned Enhancements**:
-  We will incorporate an additional benchmark dataset (e.g., Defects4J-Trans) to further validate PReMM’s repair capabilities. This new dataset will help mitigate potential data contamination concerns while strengthening the generalizability of our results.
-- Note: The primary evaluation dataset (Defects4J) remains unchanged. Experiments involving the new dataset will be presented in an expanded discussion section.
-- **Impact on the Artifact**:
-  The core technical implementation (e.g., repair algorithms) will remain unaffected. The artifact will be extended to include support for the new dataset without structural modifications.
+
+##### 🛠️ Configuration Steps for Runing PReMM on Gitbug-Java
+
+- Clone PReMM repository into the Ubuntu system or VM.
+- Modify the configuration file:
+
+Edit `Config/gitbug_java_enviroment.json`
+
+```python
+{
+  "gitbug_repo": "",       // Path to Gitbug-Java repository
+  "conda_env_name": ""     // Conda environment name for Gitbug-Java
+}
+```
+
+- **Adapt Gitbug-Java for PReMM**:
+
+Apply additional modification to the Gitbug-Java Repository, Modify file `gitbug-java/gitbug/bug.py`, line 199.
+
+```python
+shutil.rmtree(Path(workdir, ".act-result"), ignore_errors=True)
+```
+This folder contains project compilation files. If deleted, PReMM cannot perform static analysis on Gitbug-Java bugs.
+
+    - **Alternative**:
+
+        - Unzip `analysis_output.zip` into `<PReMM_repo_path>/analysis_out`.
+        - The folder `gitbug-java` inside contains all precomputed static analysis results for all bugs in gitbug-java.
+
+After the preparation you can run
+##### ✅ Single Bug Execution
+```shell
+poetry run python run.py --dataset defects4j-trans --bug_id TheAlgorithms-Java-4f1514980495 -f -c -d --chain_length 5
+```
+Run PReMM on the list of bugs by specifying the file `datasets/gitbug-java/bug_pfl.json` as the target file.
+##### ✅ All Bugs Execution
+```shell
+poetry run python run.py --dataset defects4j-trans --bug_id all -f -c -d --chain_length 5
+```
+
+#### Results
+
+`Discussion-Results.zip` stores the experimental results on Defects4J-Trans and Gitbug-Java.
+
+## 6 Reusability Guide
+
+
+### Support for New Benchmarks
+
+PReMM currently supports four datasets: Defects4JV1.2, Defects4JV2.0, Defects4J-Trans, and Gitbug-Java.
+
+To add support for new benchmarks, follow these steps:
+
+#### Step 1: Implement Benchmark Interface
+
+Create a new file `benchmark/your_benchmark.py` (or modify `benchmark/new_benchmark.py`) implementing all abstract methods from the Benchmark class:
+
+```python
+@BenchmarkRegistry.register("your-benchmark")
+class YourBenchmark(Benchmark):
+    def __init__(self, database_name):
+        super().__init__(database_name)
+        self.database_name = database_name
+        self.bug_id = "bug_id"
+        self.work_dir = "work_dir"
+        self.source_dir = "source_dir"
+        self.build_dir = "build_dir"
+        self.test_source_dir = "test_source_dir"
+        self.test_build_dir = "test_build_dir"
+        self.fault_location_file = "fault_location_file"
+        self.init_failing_tests = {}
+
+    def checkout(self, bug_id):
+        """Checkout the specific bug version from the repository"""
+        self.bug_id = bug_id
+        self.work_dir = os.path.join(utils.TEMP_DIR, bug_id)
+
+        # TODO: Implement repository checkout logic
+        # - Clone or checkout the specific bug version
+        # - Set up the directory structure
+
+        # TODO: Set these paths according to the project structure
+        self.source_dir = "source_dir"  # e.g., src/main/java/
+        self.build_dir = "build_dir"  # e.g., target/classes/
+        self.test_source_dir = "test_source_dir"  # e.g., src/test/java/
+        self.test_build_dir = "test_build_dir"  # e.g., target/test-classes/
+
+        # TODO: The fault location file of the current bug, e.g., `datasets/defects4jv1.2/fault_location/defects4j/chart/1`
+        self.fault_location_file = "fault_location_file"
+
+        # TODO: Initialize failing tests by running initial test suite
+        self.init_failing_tests = {}  # Format: {"ClassName::methodName": {"failing_info": ..., "test_code": ...}}
+
+    def compile_files(self, files: list):
+        """Compile specific files in the project"""
+        # TODO: Implement incremental compilation
+        # - Should only compile the specified files
+        # - Return (success: bool, error_message: str)
+        return True, ""
+
+    def compile_project(self):
+        """Compile the entire project"""
+        # TODO: Implement full project compilation
+        # - Should compile both main and test code
+        # - Return (success: bool, error_message: str)
+        return True, ""
+
+    def test_failed_test_cases(self, failed_test_cases: list):
+        """Run specific test cases that previously failed"""
+        test_info = {}
+        # TODO: Implement targeted test execution
+        # - Should only run the specified test cases
+        # - Return dict with format:
+        #   {
+        #       "ClassName::methodName": {
+        #           "test_name": ...,
+        #           "failing_info": ...,
+        #           "test_code": ...
+        #       }
+        #   }
+        return test_info
+
+    def test_project(self):
+        """Run all test cases in the project"""
+        test_info = {}
+        # TODO: Implement full test suite execution
+        # - Should run all test cases
+        # - Return tuple: (number_of_failing_tests: int, test_info: dict)
+        #   where test_info has format:
+        #   {
+        #       "ClassName::methodName": {
+        #           "failing_info": ...,
+        #           "test_case_code": ...
+        #       }
+        #   }
+        return 0, test_info
+
+    def get_all_bugs(self):
+        """Get list of all available bugs in this dataset"""
+        # TODO: Implement bug enumeration
+        # - Should return list of all bug IDs available in this dataset
+        # - Can read from metadata file or query repository
+        return []
+```
+Reference implementations:
+See `benchmark/defects4j.py` and `benchmark/gitbug_java.py` for complete examples.
+
+#### Step 2: Provide Fault Location Files
+For each bug, create a fault location file in this format:
+```
+package.ClassName.method:line||method:line...
+package.ClassName.method2:line...
+```
+Example (`datasets/defects4jv1.2/fault_location/defects4j/chart/16`):
+```
+org.jfree.data.category.DefaultIntervalCategoryDataset.setCategoryKeys:338
+org.jfree.data.category.DefaultIntervalCategoryDataset.DefaultIntervalCategoryDataset:207||org.jfree.data.category.DefaultIntervalCategoryDataset.DefaultIntervalCategoryDataset:208
+```
+Set the path to this file in checkout():
+```python
+self.fault_location_file = "path/to/your_fault_locations/bug_id"
+```
+
+#### Step 3: Register Benchmark
+
+Add your module to `benchmark/__init__.py`:
+
+```python
+from .benchmark import Benchmark, BenchmarkRegistry
+
+#
+from . import defects4j
+from . import gitbug_java
+from . import new_benchmark
+
+# add your module
+from . import your_benchmark
+```
+
+#### Step 4: Execute PReMM
+Run your benchmark via:
+##### ✅ Single Bug Execution
+```shell
+poetry run python run.py --dataset your_benchmark --bug_id your_bug_id -f -c -d --chain_length 5
+```
+
+##### ✅ All Bugs Execution
+```shell
+poetry run python run.py --dataset your_benchmark --bug_id all -f -c -d --chain_length 5
+```
