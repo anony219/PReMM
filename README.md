@@ -425,6 +425,22 @@ The `baselines.zip` contains the results of the following baselines:
 
 We added experiments on the Defects4J-Trans and Gitbug-Java benchmarks in Section 5 (Section Discussion) to further validate PReMM's repair capabilities.
 
+#### Fault Localization Contribution
+
+To enable PReMM’s application on both datasets, we implemented the following improvements:
+
+- Defects4J-Trans (https://zenodo.org/records/13901271) Dataset Enhancements
+  - Fixed 126 instances of erroneous or missing fault localization data in the file:
+  ```
+  datasets/defects4j-trans/enhanced_single_function_repair_trans_final_fl.json
+  ```
+
+-  Gitbug-Java Dataset Augmentation
+    - Added 199 fault localization entries for bugs in:
+    ```
+    datasets/gitbug-java/bug_pfl.json`
+    ```
+
 #### Replicate Defects4J-Trans
 
 No additional dataset preparation is required, as Defects4J-Trans is built upon Defects4J v2.0.
