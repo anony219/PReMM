@@ -421,7 +421,7 @@ The `baselines.zip` contains the results of the following baselines:
 | **ChatRepair**   | https://figshare.com/s/9796028cef4d7dbc08ff |
 | **ThinkRepair**  | https://github.com/vinci-grape/ThinkRepair  |
 
-## 5 Replicate Defects4J-Trans and Gitbug-Java Experiment 
+## 5 Replicate Defects4J-Trans and Gitbug-Java Experiment
 
 We added experiments on the Defects4J-Trans and Gitbug-Java benchmarks in Section 5 (Section Discussion) to further validate PReMM's repair capabilities.
 
@@ -430,16 +430,19 @@ We added experiments on the Defects4J-Trans and Gitbug-Java benchmarks in Sectio
 To enable PReMM’s application on both datasets, we implemented the following improvements:
 
 - Defects4J-Trans (https://zenodo.org/records/13901271) Dataset Enhancements
+
   - Fixed 126 instances of erroneous or missing fault localization data in the file:
+
   ```
   datasets/defects4j-trans/enhanced_single_function_repair_trans_final_fl.json
   ```
+- Gitbug-Java Dataset Augmentation
 
--  Gitbug-Java Dataset Augmentation
-    - Added 199 fault localization entries for bugs in:
-    ```
-    datasets/gitbug-java/bug_pfl.json`
-    ```
+  - Added 199 fault localization entries for bugs in:
+
+  ```
+  datasets/gitbug-java/bug_pfl.json`
+  ```
 
 #### Replicate Defects4J-Trans
 
@@ -452,12 +455,15 @@ To run PReMM on Defects4J-Trans:
 ```shell
 poetry run python run.py --dataset defects4j-trans --bug_id Chart-26 -f -c -d --chain_length 5
 ```
+
 ##### ✅ All Bugs Execution
+
 ```shell
 poetry run python run.py --dataset defects4j-trans --bug_id all -f -c -d --chain_length 5
 ```
 
-#### Replicate Gitbug-Java 
+#### Replicate Gitbug-Java
+
 GitBug-Java is a new benchmark for program repair evaluation. It requires strict environment:
 
 ##### 📦 System Requirements
@@ -465,8 +471,7 @@ GitBug-Java is a new benchmark for program repair evaluation. It requires strict
 - Ubuntu/Debian with GLIBC 2.32 or 2.34
 - Minimum 140GB disk space
 - Alternatively, use an Ubuntu VM (minimum 140GB disk)
-Please check the step by step process here: https://github.com/gitbugactions/gitbug-java
-
+  Please check the step by step process here: https://github.com/gitbugactions/gitbug-java
 
 ##### 🛠️ Configuration Steps for Runing PReMM on Gitbug-Java
 
@@ -489,22 +494,28 @@ Apply additional modification to the Gitbug-Java Repository, Modify file `gitbug
 ```python
 shutil.rmtree(Path(workdir, ".act-result"), ignore_errors=True)
 ```
+
 This folder contains project compilation files. If deleted, PReMM cannot perform static analysis on Gitbug-Java bugs.
 
-    - **Alternative**:
+    -**Alternative**:
 
-        - Unzip `analysis_output.zip` into `<PReMM_repo_path>/analysis_out`.
+    - Unzip`analysis_output.zip` into `<PReMM_repo_path>/analysis_out`.
         - The folder `gitbug-java` inside contains all precomputed static analysis results for all bugs in gitbug-java.
 
 After the preparation you can run
+
 ##### ✅ Single Bug Execution
+
 ```shell
-poetry run python run.py --dataset defects4j-trans --bug_id TheAlgorithms-Java-4f1514980495 -f -c -d --chain_length 5
+poetry run python run.py --dataset gitbug-java --bug_id TheAlgorithms-Java-4f1514980495 -f -c -d --chain_length 5
 ```
+
 Run PReMM on the list of bugs by specifying the file `datasets/gitbug-java/bug_pfl.json` as the target file.
+
 ##### ✅ All Bugs Execution
+
 ```shell
-poetry run python run.py --dataset defects4j-trans --bug_id all -f -c -d --chain_length 5
+poetry run python run.py --dataset gitbug-java --bug_id all -f -c -d --chain_length 5
 ```
 
 #### Results
@@ -512,7 +523,6 @@ poetry run python run.py --dataset defects4j-trans --bug_id all -f -c -d --chain
 `Discussion-Results.zip` stores the experimental results on Defects4J-Trans and Gitbug-Java.
 
 ## 6 Reusability Guide
-
 
 ### Support for New Benchmarks
 
@@ -611,21 +621,28 @@ class YourBenchmark(Benchmark):
         # - Can read from metadata file or query repository
         return []
 ```
+
 Reference implementations:
 See `benchmark/defects4j.py` and `benchmark/gitbug_java.py` for complete examples.
 
 #### Step 2: Provide Fault Location Files
+
 For each bug, create a fault location file in this format:
+
 ```
 package.ClassName.method:line||method:line...
 package.ClassName.method2:line...
 ```
+
 Example (`datasets/defects4jv1.2/fault_location/defects4j/chart/16`):
+
 ```
 org.jfree.data.category.DefaultIntervalCategoryDataset.setCategoryKeys:338
 org.jfree.data.category.DefaultIntervalCategoryDataset.DefaultIntervalCategoryDataset:207||org.jfree.data.category.DefaultIntervalCategoryDataset.DefaultIntervalCategoryDataset:208
 ```
+
 Set the path to this file in checkout():
+
 ```python
 self.fault_location_file = "path/to/your_fault_locations/bug_id"
 ```
@@ -647,13 +664,17 @@ from . import your_benchmark
 ```
 
 #### Step 4: Execute PReMM
+
 Run your benchmark via:
+
 ##### ✅ Single Bug Execution
+
 ```shell
 poetry run python run.py --dataset your_benchmark --bug_id your_bug_id -f -c -d --chain_length 5
 ```
 
 ##### ✅ All Bugs Execution
+
 ```shell
 poetry run python run.py --dataset your_benchmark --bug_id all -f -c -d --chain_length 5
 ```
