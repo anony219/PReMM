@@ -260,7 +260,7 @@ def run_command(command, logger, cwd=None):
     try:
         start_time = time.time()
         """Run a command in the shell and print its output."""
-        result = subprocess.run(command, shell=True, cwd=cwd, capture_output=True, text=True, timeout=30)
+        result = subprocess.run(command, shell=True, cwd=cwd, capture_output=True, text=True, timeout=300)
         logger.log(result.stdout)
         if result.returncode != 0:
             logger.log(result.stderr)
