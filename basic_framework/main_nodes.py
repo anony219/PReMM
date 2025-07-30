@@ -323,8 +323,8 @@ def postprocessor(m_state: MAgentState):
             if agent_state.get('repair_state').get('repair_count') > max_iterative_count:
                 max_iterative_count = agent_state.get('repair_state').get('repair_count')
         utils.Repair_Iterative_Count = max_iterative_count
-        utils.recover_files(m_state.get('bug_benchmark').get_work_dir(), m_state.get('fault_files'))
-        m_state.get('bug_benchmark').recover_files(m_state.get('fault_files'))
+        # utils.recover_files(m_state.get('bug_benchmark').get_work_dir(), m_state.get('fault_files'))
+        # m_state.get('bug_benchmark').recover_files(m_state.get('fault_files'))
     else:
         print("Repair failed!")
         utils.Repair_Process_Logger.log("Repair failed!")
