@@ -423,7 +423,7 @@ The `baselines.zip` contains the results of the following baselines:
 
 ## 5 Replicate Defects4J-Trans and Gitbug-Java Experiment
 
-We added experiments on the Defects4J-Trans and Gitbug-Java benchmarks in Section 5 (Section Discussion) to further validate PReMM's repair capabilities.
+We added experiments on the Defects4J-Trans and Gitbug-Java benchmarks in Section 4.6 (Section Data Contamination) to further validate PReMM's repair capabilities.
 
 #### Fault Localization Contribution
 
