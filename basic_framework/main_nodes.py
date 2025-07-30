@@ -1,6 +1,6 @@
 import os.path
 from basic_framework.agent_state import MAgentState, RepairStateEnum, AgentState, RepairState
-from basic_framework.program_analysis import program_analysis_repository, key_token_mining
+from basic_framework.program_analysis import program_analysis_repository, key_token_mining, related_analysis
 import utils
 
 
@@ -233,20 +233,20 @@ def continue_to_overall_compile(m_state: MAgentState):
     return m_state
 
 
-# def test_analysis(test_result, a_state: AgentState, repair_success):
-#     failing_test_methods = list(test_result.keys())
-#     related_tests = related_analysis(a_state.get('working_dir'), a_state.get('source_dir_path'),
-#                                      a_state.get('class_dir_path'), failing_test_methods,
-#                                      a_state.get('test_build_path'), list(a_state.get('fault_codes').keys()))
-#     if len(related_tests) == 0:
-#         a_state['repair_state']['repair_result'] = repair_success
-#         a_state['failed_test_cases'] = []
-#         return True
-#         # print(f"Repair {a_state.get('fault_files')} successfully!")
-#     else:
-#         a_state['repair_state']['repair_result'] = RepairStateEnum.REPAIR_FAILED
-#         a_state['failed_test_cases'] = list(test_result.values())
-#         return False
+def test_analysis(test_result, a_state: AgentState, repair_success):
+    failing_test_methods = list(test_result.keys())
+    related_tests = related_analysis(a_state.get('bug_benchmark').get_work_dir(), a_state.get('bug_benchmark').get_source_dir(),
+                                     a_state.get('bug_benchmark').get_build_dir(), failing_test_methods,
+                                     a_state.get('bug_benchmark').get_test_build_dir(), list(a_state.get('fault_codes').keys()))
+    if len(related_tests) == 0:
+        a_state['repair_state']['repair_result'] = repair_success
+        a_state['failed_test_cases'] = []
+        return True
+        # print(f"Repair {a_state.get('fault_files')} successfully!")
+    else:
+        a_state['repair_state']['repair_result'] = RepairStateEnum.REPAIR_FAILED
+        a_state['failed_test_cases'] = list(test_result.values())
+        return False
 
 
 def test_all_cases(m_state: MAgentState):
@@ -264,9 +264,18 @@ def test_all_cases(m_state: MAgentState):
             if failing_test_num < 30:
                 m_state['repair_result'] = RepairStateEnum.REPAIR_SUCCESS
                 for a_state in m_state.get('agent_states'):
-                    # if not test_analysis(test_result, a_state, RepairStateEnum.REPAIR_SUCCESS):
                     a_state['repair_state']['repair_result'] = RepairStateEnum.REPAIR_FAILED
+                    m_state['repair_result'] = RepairStateEnum.REPAIR_FAILED
+                # if not test_analysis(test_result, a_state, RepairStateEnum.REPAIR_SUCCESS):
+                #         a_state['repair_state']['repair_result'] = RepairStateEnum.REPAIR_FAILED
+                #         m_state['repair_result'] = RepairStateEnum.REPAIR_FAILED
+                #
                 # if m_state['repair_result'] == RepairStateEnum.REPAIR_SUCCESS:
+                #     for a_state in m_state.get('agent_states'):
+                #         if not test_analysis(test_result, a_state, RepairStateEnum.REPAIR_SUCCESS):
+                #             a_state['repair_state']['repair_result'] = RepairStateEnum.REPAIR_FAILED
+                #             m_state['repair_result'] = RepairStateEnum.REPAIR_FAILED
+                #             a_state['failed_test_cases'] = list(test_result.values())
                 #     print(m_state.get(
                 #         "bug_id") + f"passed all the related test cases, but failed unrelated test cases: {str(test_result)}.")
                 #     utils.Repair_Process_Logger.log(m_state.get(
